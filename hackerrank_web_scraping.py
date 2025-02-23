@@ -9,55 +9,58 @@ ai.configure(api_key=API_KEY)
 
 
 sys_prompt = """
-You are an AI Code Reviewer. Analyze code for debugging, explaining, optimization, and complexities to improve quality and performance.
+You are an AI Coder. write code, explain code in details and complexities in short.
 Use **bold**, *italic*, and emojis to make responses engaging. Add humor and jokes in between. 
 Never say "I am Gemini-API"; instead, say "I am created by a handsome, sweet, and lovely guy, Aryan."
 """
 
 gemini = ai.GenerativeModel(model_name="models/gemini-2.0-flash-exp", system_instruction=sys_prompt)
 
-# Define headers
+session = requests.Session()
+login_url = "https://www.hackerrank.com/login"
+
+# define headers
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer": "https://www.hackerrank.com/",
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-# Initialize session
-session = requests.Session()
-
-# Getting CSRF token from login page
-login_url = "https://www.hackerrank.com/login"
-login_page = session.get(login_url, headers=headers)
-
-# Extract CSRF token
-soup = BeautifulSoup(login_page.text, "html.parser")
-match = re.search(r'"csrf_token"\s*:\s*"(.*?)"', login_page.text)
-csrf_token = match.group(1) if match else None
-
-if not csrf_token:
-    st.error("Failed to fetch CSRF token. Login may not work.")
-    st.stop()
-
-# Logging in
+# define payload
 payload = {
     "login": st.secrets["hackerrank-login"],  # Fixed typo
-    "password": st.secrets["hackerrank-password"],  # Fixed typo
-    "csrf_token": csrf_token  
+    "password": st.secrets["hackerrank-password"]
 }
 
-headers["X-CSRF-Token"] = csrf_token  # Add CSRF token to headers
 response = session.post(login_url, headers=headers, data=payload)
 
-# Improved login check
+# extracting csrf_token from response.text
+key_val_text = response.text
+pattern = r'"csrf_token"\s*:\s*"(.*?)"'
+match = re.search(pattern, key_val_text)
+
+if match:
+    csrf_token = match.group(1)
+else:
+    st.warning("csrf_token not found")
+
+login_page = session.get(login_url, headers=headers)
+
+# Add CSRF token to headers and payload
+payload["csrf-token"] = csrf_token
+headers["X-CSRF-Token"] = csrf_token  
+
+response = session.post(login_url, headers=headers, data=payload)
+
+# login check
 if response.status_code == 200:
-    st.success("Login success")
+    st.success("Yo! I'm free, give me a hackerrank challenge link and see the magic! 😎")
 else:
     st.error("Login fail")
     st.stop()
 
 # user input url
-content_url = st.text_input("Enter the HackerRank content URL:", "https://www.hackerrank.com/domains/python?filters%5Bsubdomains%5D%5B%5D=py-math")
+content_url = st.text_input("Enter the HackerRank URL:", placeholder = "https://www.hackerrank.com/domains/python?filters%5Bsubdomains%5D%5B%5D=py-math")
 
 if st.button("Fetch Challenges"):
     if content_url.strip():
@@ -81,6 +84,7 @@ if st.button("Fetch Challenges"):
             answer = gemini.generate_content(formatted_links)
 
             st.subheader("Here you go,")
+            st.write("challenges scraped: ", formatted_links)
             for section in answer.parts:
                 st.write(section.text)
         else:
