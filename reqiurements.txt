@@ -1,5 +1,5 @@
 requests
 google.generativeai
 streamlit
-bs4
+BeautifulSoup
 re
