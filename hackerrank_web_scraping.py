@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import streamlit as st
 import google.generativeai as ai
 
-API_KEY = st.secrets["api_key"]
+API_KEY = st.secrets["api-key"]
 ai.configure(api_key=API_KEY)
 
 
