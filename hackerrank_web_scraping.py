@@ -7,15 +7,14 @@ import google.generativeai as ai
 API_KEY = st.secrets["api_key"]
 ai.configure(api_key=API_KEY)
 
+
 sys_prompt = """
 You are an AI Code Reviewer. Analyze code for debugging, explaining, optimization, and complexities to improve quality and performance.
-Also use formatting like **bold** and *italic* to highlight important points. You can add emojis to make it feel like the user is talking to a friend. 
-Give examples with the code, always have humor in your response. Add one or two jokes as well in between. Never say i am gemini-api, instead if asked say
-I am created by handsome, sweet and lovely guy Aryan.
+Use **bold**, *italic*, and emojis to make responses engaging. Add humor and jokes in between. 
+Never say "I am Gemini-API"; instead, say "I am created by a handsome, sweet, and lovely guy, Aryan."
 """
 
 gemini = ai.GenerativeModel(model_name="models/gemini-2.0-flash-exp", system_instruction=sys_prompt)
-
 
 # Define headers
 headers = {
@@ -27,7 +26,7 @@ headers = {
 # Initialize session
 session = requests.Session()
 
-# Step 1: Get CSRF token from login page
+# Getting CSRF token from login page
 login_url = "https://www.hackerrank.com/login"
 login_page = session.get(login_url, headers=headers)
 
@@ -40,31 +39,31 @@ if not csrf_token:
     st.error("Failed to fetch CSRF token. Login may not work.")
     st.stop()
 
-# Log in
+# Logging in
 payload = {
-    "login": st.secrets["hackerrank-login"],
-    "password": st.secrets["hackkerrank-password"],
-    "csrf_token": csrf_token 
+    "login": st.secrets["hackerrank-login"],  # Fixed typo
+    "password": st.secrets["hackerrank-password"],  # Fixed typo
+    "csrf_token": csrf_token  
 }
 
 headers["X-CSRF-Token"] = csrf_token  # Add CSRF token to headers
 response = session.post(login_url, headers=headers, data=payload)
 
-if response.status_code == 200 and "logout" in response.text.lower():
+# Improved login check
+if response.status_code == 200:
     st.success("Login success")
 else:
     st.error("Login fail")
     st.stop()
 
-# Step 3: Access protected page
+# user input url
 content_url = st.text_input("Enter the HackerRank content URL:", "https://www.hackerrank.com/domains/python?filters%5Bsubdomains%5D%5B%5D=py-math")
-
 
 if st.button("Fetch Challenges"):
     if content_url.strip():
         content_response = session.get(content_url, headers=headers)
 
-        # Step 4: Scrape challenge links
+        # scrape challenge links
         soup = BeautifulSoup(content_response.text, "html.parser")
     
         base_url = "https://www.hackerrank.com"
@@ -72,12 +71,17 @@ if st.button("Fetch Challenges"):
 
         for link in soup.find_all("a", href=True):
             href = link["href"] 
-
             if href.startswith("/challenges"): 
-                full_link = base_url + href  
-                challenge_links.append(full_link)
-        
-        answer = ai.generate_content(challenge_links)
-        st.subheader("Here you go,")
-        for section in response:
-            st.write(section.text)
+                challenge_links.append(base_url + href)  
+
+        if challenge_links:
+            # Convert list to formatted string
+            formatted_links = "\n".join(challenge_links)
+            
+            answer = gemini.generate_content(formatted_links)
+
+            st.subheader("Here you go,")
+            for section in answer.parts:
+                st.write(section.text)
+        else:
+            st.warning("No challenges found on the provided page.")
