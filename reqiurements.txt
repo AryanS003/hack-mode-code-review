@@ -1,0 +1,5 @@
+requests
+google.generativeai
+streamlit
+bs4
+re
