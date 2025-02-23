@@ -1,5 +1,5 @@
 requests
 google.generativeai
 streamlit
-beautifulsoup
+beautifulsoup4==4.11.1
 re
